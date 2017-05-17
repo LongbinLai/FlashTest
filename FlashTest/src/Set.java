@@ -1,5 +1,8 @@
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
@@ -10,15 +13,15 @@ public class Set<T extends Attributes> implements Serializable, Iterable<T> {
   public static void main(String[] args) {
     Set<Attributes> set = new Set<Attributes>();
     Attributes attr1 = new Attributes();
-    attr1.set(Attributes.key("age", Integer.class), 5);
+    attr1.set("age", 5);
     Attributes attr2 = new Attributes();
-    attr2.set(Attributes.key("age", Integer.class), 1);
+    attr2.set("age", 1);
     Attributes attr3 = new Attributes();
-    attr3.set(Attributes.key("age", Integer.class), 3);
+    attr3.set("age", 3);
     set.append(attr1).append(attr2).append(attr3);
 
     Set<Attributes> filtered = set.filter(
-        new Predicator<>(Attributes.key("age", Integer.class), CompareUtil.BiOprator.LT, 4));
+        new Predicator<>(Attributes.key("age", Integer.class), RankUtil.CompareOprator.LE, 4));
     System.out.println(set);
     System.out.println(filtered);
 
@@ -43,7 +46,7 @@ public class Set<T extends Attributes> implements Serializable, Iterable<T> {
   public Set() {
     elements = new ArrayList<T>();
   }
-  
+
   public Set(Set<T> other) {
     elements = new ArrayList<T>();
     elements.addAll(other.elements);
@@ -112,15 +115,64 @@ public class Set<T extends Attributes> implements Serializable, Iterable<T> {
     Set<T> filtered = this.filter(predicators);
     return filtered.aggregation(key, agg);
   }
-  
+
   public Set<T> union(Set<T> that) {
     elements.addAll(that.elements);
     return this;
   }
 
+  public Set<T> topK(int k) {
+    assert (k > 0 && k <= size());
+    Set<T> topKSet = new Set<T>();
+    for (T elem : elements) {
+      if (--k < 0) {
+        break;
+      }
+      topKSet.append(elem);
+    }
+    return topKSet;
+  }
+
+  public Set<T> reverseTopK(int k) {
+    assert (k > 0 && k <= size());
+    Set<T> topKSet = new Set<T>();
+    int elementSize = elements.size();
+    for (int i = elementSize - 1; i >= elementSize - k; --i) {
+      topKSet.append(elements.get(i));
+    }
+    return topKSet;
+  }
+
+  public <VT extends Comparable<VT>> Set<T> order(Attributes.Key<VT> key, RankUtil.Order order,
+      int topK) throws Exception {
+    Set<T> ordered = new Set<T>(this);
+    for (T elem : elements) {
+      elem.addKeyForSort(key);
+    }
+    ordered.elements.sort(new Comparator<T>() {
+      @Override
+      public int compare(T o1, T o2) {
+        // TODO Auto-generated method stub
+        return o1.compareTo(o2);
+      }
+    });
+    if (order == RankUtil.Order.ASC) {
+      return ordered.topK(topK);
+    }
+    return ordered.reverseTopK(topK);
+  }
+
   @Override
   public Iterator<T> iterator() {
     return this.elements.iterator();
+  }
+
+  int size() {
+    return elements.size();
+  }
+
+  boolean isEmpty() {
+    return elements.isEmpty();
   }
 
   @Override
@@ -169,6 +221,5 @@ public class Set<T extends Attributes> implements Serializable, Iterable<T> {
   }
 
   private List<T> elements;
-
 
 }

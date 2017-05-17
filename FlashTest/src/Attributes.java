@@ -1,22 +1,36 @@
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-public class Attributes implements Serializable {
+public class Attributes implements Serializable, Comparable<Attributes> {
 
   public static void main(String[] args) {
     Attributes attribute = new Attributes();
-    attribute.set(Attributes.key("age", Integer.class), 1);
-    attribute.set(Attributes.key("name", String.class), "Longbin");
-    attribute.set(Attributes.key("sex", Boolean.class), true);
+    attribute.set("age", 1);
+    attribute.set("name", "Longbin");
+    attribute.set("sex", true);
     System.out.println(attribute.get(Attributes.key("age", Integer.class)));
     System.out.println(attribute.get(Attributes.key("name", String.class)));
     System.out.println(attribute.get(Attributes.key("sex", Boolean.class)));
-    System.out.println(
-        attribute.on(new Predicator<>(Attributes.key("age", Integer.class), CompareUtil.BiOprator.GE, 1)));
-    System.out.println(
-        attribute.on(new Predicator<>(Attributes.key("age", Integer.class), CompareUtil.BiOprator.GE, 20)));
+    System.out.println(attribute
+        .on(new Predicator<>(Attributes.key("age", Integer.class), RankUtil.CompareOprator.GE, 1)));
+    System.out.println(attribute
+        .on(new Predicator<>(Attributes.key("age", Integer.class), RankUtil.CompareOprator.GE, 20)));
+    
+    Attributes attribute2 = new Attributes();
+    attribute2.set("age", 5);
+    attribute2.set("name", "Longbin");
+    attribute2.set("sex", true);
+    try {
+      attribute.addKeyForSort(Attributes.key("age", Integer.class));
+    } catch (Exception e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    System.out.println(attribute.compareTo(attribute2));
   }
 
   public static class Key<T> {
@@ -58,10 +72,9 @@ public class Attributes implements Serializable {
     private final Class<T> type;
   }
 
-  private static final long serialVersionUID = 1L;
-
   public Attributes() {
-    attrMap = new HashMap<>();
+    attributeMap = new HashMap<>();
+    keysForSort = new ArrayList<>();
   }
 
   public static <T> Key<T> key(String id, Class<T> type) {
@@ -69,25 +82,32 @@ public class Attributes implements Serializable {
   }
 
   public <T> T get(Key<T> key) throws NoSuchElementException {
-    if (!attrMap.containsKey(key)) {
+    if (!attributeMap.containsKey(key)) {
       throw new NoSuchElementException("key: " + key);
     }
-    return key.type.cast(attrMap.get(key));
+    return key.type.cast(attributeMap.get(key));
   }
 
-  public <T> boolean set(Key<T> key, T value) {
-    boolean isExist = attrMap.containsKey(key);
-    attrMap.put(key, value);
-    return isExist;
+  public <T> void set(String key, T value) {
+    attributeMap.put(Attributes.key(key, value.getClass()), value);
+  }
+  
+  public <T> void set(Key<T> key, T value) {
+    attributeMap.put(key, value);
   }
 
   public <T> boolean hasAttribute(Key<T> key) {
-    return attrMap.containsKey(key);
+    return attributeMap.containsKey(key);
+  }
+  
+  public <T> T remove(Key<T> key) {
+    keysForSort.remove(key);
+    return key.type().cast(attributeMap.remove(key));
   }
 
   /**
    * Given a key of the attribute, an binary operator, and the value to compare, return the result
-   * of attrMap[key] opr val.
+   * of attributeMap[key] opr val.
    * 
    * @param key
    * @param opr
@@ -101,15 +121,45 @@ public class Attributes implements Serializable {
     } catch (NoSuchElementException e) {
       return true;
     }
-    return CompareUtil.compare(attrVal, predicator.operator(), predicator.value());
+    return RankUtil.compare(attrVal, predicator.operator(), predicator.value());
+  }
+  
+  public <T extends Comparable<T>> void addKeyForSort(Key<T> key) throws Exception {
+    if(!keysForSort.contains(key)) { 
+      T value = get(key);
+      if (!(value instanceof Comparable)) {
+        throw new Exception("The value of the key is not comparable.");
+      }
+      keysForSort.add(key);
+    }
+  }
+  
+  @Override
+  public int compareTo(Attributes other) {
+    if (keysForSort.isEmpty()) {
+      return 0;
+    }
+    int comp = 0;
+    for (Key<?> key : keysForSort) {
+      if (!hasAttribute(key) || !other.hasAttribute(key)) {
+        return 0;
+      }
+      Comparable value1 = (Comparable) get(key);
+      Comparable value2 = (Comparable) other.get(key);
+      comp = value1.compareTo(value2);
+      if (comp != 0) {
+        break;
+      }
+    }
+    return comp;
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append(StringUtil.ARRAY_START);
-    int count = 0, size = attrMap.size();
-    for (Map.Entry<Key<?>, Object> entry : attrMap.entrySet()) {
+    int count = 0, size = attributeMap.size();
+    for (Map.Entry<Key<?>, Object> entry : attributeMap.entrySet()) {
       sb.append(StringUtil.PAIR_START);
       sb.append(entry.getKey());
       sb.append(StringUtil.PAIR_SPLITTER);
@@ -122,6 +172,10 @@ public class Attributes implements Serializable {
     sb.append(StringUtil.ARRAY_END);
     return sb.toString();
   }
+  
+  private static final long serialVersionUID = 1L;
+  // Store the keys for sort
+  private List<Key<?>> keysForSort;
+  private Map<Key<?>, Object> attributeMap;
 
-  private Map<Key<?>, Object> attrMap;
 }

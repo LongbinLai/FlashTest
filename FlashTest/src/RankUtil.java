@@ -1,11 +1,15 @@
 
-public class CompareUtil {
+public class RankUtil {
   
-  public enum BiOprator {
+  public enum CompareOprator {
     GT, GE, LT, LE, EQ, NE
   };
+  
+  public enum Order {
+    DESC, ASC
+  }
 
-  public final static <T extends Comparable<T>> boolean compare(T x, BiOprator opr, T y) {
+  public final static <T extends Comparable<T>> boolean compare(T x, CompareOprator opr, T y) {
     switch (opr) {
       case GT:
         return x.compareTo(y) > 0;

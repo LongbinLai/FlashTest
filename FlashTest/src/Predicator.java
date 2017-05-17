@@ -1,6 +1,6 @@
 
 public class Predicator<T extends Comparable<T>> {
-  public Predicator(Attributes.Key<T> key, CompareUtil.BiOprator opr, T val) {
+  public Predicator(Attributes.Key<T> key, RankUtil.CompareOprator opr, T val) {
     this.key = key;
     this.opr = opr;
     this.val = val;
@@ -10,7 +10,7 @@ public class Predicator<T extends Comparable<T>> {
     return this.key;
   }
 
-  public CompareUtil.BiOprator operator() {
+  public RankUtil.CompareOprator operator() {
     return this.opr;
   }
 
@@ -19,6 +19,6 @@ public class Predicator<T extends Comparable<T>> {
   }
 
   private final Attributes.Key<T> key;
-  private CompareUtil.BiOprator opr;
+  private RankUtil.CompareOprator opr;
   private T val;
 }
