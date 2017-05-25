@@ -1,5 +1,5 @@
 
-public class Edge<T> extends Attributes {
+public class Edge<T> extends Attribute {
 
   /**
    * 

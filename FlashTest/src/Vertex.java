@@ -1,35 +1,43 @@
 import java.util.NoSuchElementException;
 
-public class Vertex<T> extends Attributes {
+public class Vertex<T> extends Attribute {
 
   /**
    * 
    */
   private static final long serialVersionUID = 2573902725010692564L;
+  
+  public Vertex(T id) {
+    this.id = id;
+  }
 
   public T id() {
     return this.id;
   }
+  
+  public void setId(T id) {
+    this.id = id;
+  }
 
-  public Set<Edge<T>> in() {
+  public AttributeSet<Edge<T>> in() {
     return this.in;
   }
 
-  public Set<Edge<T>> out() {
+  public AttributeSet<Edge<T>> out() {
     return this.out;
   }
 
-  public Set<Edge<T>> neighbors() {
+  public AttributeSet<Edge<T>> neighbors() {
     Set<Edge<T>> neighbor = new Set<Edge<T>>(this.in);
-    return neighbor.union(out);
+    return (AttributeSet<Edge<T>>)neighbor.union(out);
   }
 
   public <VT> VT getAttribute(String attrName, Class<VT> attrClass) {
-    return this.get(Attributes.key(attrName, attrClass));
+    return this.get(Attribute.key(attrName, attrClass));
   }
 
   public <VT> VT getTempAttribute(String attrName, Class<VT> attrClass) {
-    return tempAttributes.get(Attributes.key(attrName, attrClass));
+    return tempAttribute.get(Attribute.key(attrName, attrClass));
   }
 
   /**
@@ -40,19 +48,19 @@ public class Vertex<T> extends Attributes {
    * @throws Exception
    */
   public <VT> void makeTempPermanant(Key<VT> key) throws Exception {
-    VT value = tempAttributes.remove(key);
+    VT value = tempAttribute.remove(key);
     if (value == null) {
       throw new NoSuchElementException(
-          "Key: " + key + " is not present in the temporary attributes.");
+          "Key: " + key + " is not present in the temporary Attribute.");
     }
     if (this.hasAttribute(key)) {
-      throw new Exception("Key: " + key + " is already present in the attributes.");
+      throw new Exception("Key: " + key + " is already present in the Attribute.");
     }
     set(key, value);
   }
 
-  private Attributes tempAttributes;
-  private Set<Edge<T>> in;
-  private Set<Edge<T>> out;
+  private Attribute tempAttribute;
+  private AttributeSet<Edge<T>> in;
+  private AttributeSet<Edge<T>> out;
   private T id;
 }

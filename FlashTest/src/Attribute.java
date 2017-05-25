@@ -1,36 +1,52 @@
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-public class Attributes implements Serializable, Comparable<Attributes> {
+public class Attribute implements Serializable {
 
-  public static void main(String[] args) {
-    Attributes attribute = new Attributes();
-    attribute.set("age", 1);
-    attribute.set("name", "Longbin");
-    attribute.set("sex", true);
-    System.out.println(attribute.get(Attributes.key("age", Integer.class)));
-    System.out.println(attribute.get(Attributes.key("name", String.class)));
-    System.out.println(attribute.get(Attributes.key("sex", Boolean.class)));
-    System.out.println(attribute
-        .on(new Predicator<>(Attributes.key("age", Integer.class), RankUtil.CompareOprator.GE, 1)));
-    System.out.println(attribute
-        .on(new Predicator<>(Attributes.key("age", Integer.class), RankUtil.CompareOprator.GE, 20)));
-    
-    Attributes attribute2 = new Attributes();
-    attribute2.set("age", 5);
-    attribute2.set("name", "Longbin");
-    attribute2.set("sex", true);
-    try {
-      attribute.addKeyForSort(Attributes.key("age", Integer.class));
-    } catch (Exception e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+  public static class OrderedByKeys<T extends Comparable<T>>
+      implements Comparator<Attribute> {
+
+    public OrderedByKeys(RankUtil.Order order) {
+      this.keysForSort = new ArrayList<Key<T>>();
+      this.order = order;
     }
-    System.out.println(attribute.compareTo(attribute2));
+
+    public OrderedByKeys(List<Key<T>> keys, RankUtil.Order order) {
+      this.keysForSort = new ArrayList<Key<T>>();
+      this.keysForSort.addAll(keys);
+      this.order = order;
+    }
+
+    public void addKeysForSort(Key<T> key) {
+      // Note: An O(n) operation, keys must be relatively short
+      if (!keysForSort.contains(key)) {
+        this.keysForSort.add(key);
+      }
+    }
+
+    @Override
+    public int compare(Attribute o1, Attribute o2) {
+      int comp = 0;
+      for (Key<T> key : keysForSort) {
+        if (!o1.hasAttribute(key) || !o2.hasAttribute(key)) {
+          return 0;
+        }
+        comp = o1.get(key).compareTo(o2.get(key));
+        if (comp != 0) {
+          break;
+        }
+      }
+      return order == RankUtil.Order.ASC ? comp : -comp;
+    }
+
+    private List<Key<T>> keysForSort;
+    private RankUtil.Order order;
+
   }
 
   public static class Key<T> {
@@ -72,9 +88,32 @@ public class Attributes implements Serializable, Comparable<Attributes> {
     private final Class<T> type;
   }
 
-  public Attributes() {
+  static class Predicate<T extends Comparable<T>> {
+    public Predicate(Attribute.Key<T> key, RankUtil.CompareOprator opr, T val) {
+      this.key = key;
+      this.opr = opr;
+      this.val = val;
+    }
+
+    public Attribute.Key<T> key() {
+      return this.key;
+    }
+
+    public RankUtil.CompareOprator operator() {
+      return this.opr;
+    }
+
+    public T value() {
+      return this.val;
+    }
+
+    private final Attribute.Key<T> key;
+    private RankUtil.CompareOprator opr;
+    private T val;
+  }
+
+  public Attribute() {
     attributeMap = new HashMap<>();
-    keysForSort = new ArrayList<>();
   }
 
   public static <T> Key<T> key(String id, Class<T> type) {
@@ -89,9 +128,9 @@ public class Attributes implements Serializable, Comparable<Attributes> {
   }
 
   public <T> void set(String key, T value) {
-    attributeMap.put(Attributes.key(key, value.getClass()), value);
+    attributeMap.put(Attribute.key(key, value.getClass()), value);
   }
-  
+
   public <T> void set(Key<T> key, T value) {
     attributeMap.put(key, value);
   }
@@ -99,9 +138,8 @@ public class Attributes implements Serializable, Comparable<Attributes> {
   public <T> boolean hasAttribute(Key<T> key) {
     return attributeMap.containsKey(key);
   }
-  
+
   public <T> T remove(Key<T> key) {
-    keysForSort.remove(key);
     return key.type().cast(attributeMap.remove(key));
   }
 
@@ -114,7 +152,7 @@ public class Attributes implements Serializable, Comparable<Attributes> {
    * @param val
    * @return
    */
-  public <T extends Comparable<T>> boolean on(Predicator<T> predicator) {
+  public <T extends Comparable<T>> boolean on(Predicate<T> predicator) {
     T attrVal = null;
     try {
       attrVal = this.get(predicator.key());
@@ -122,36 +160,6 @@ public class Attributes implements Serializable, Comparable<Attributes> {
       return true;
     }
     return RankUtil.compare(attrVal, predicator.operator(), predicator.value());
-  }
-  
-  public <T extends Comparable<T>> void addKeyForSort(Key<T> key) throws Exception {
-    if(!keysForSort.contains(key)) { 
-      T value = get(key);
-      if (!(value instanceof Comparable)) {
-        throw new Exception("The value of the key is not comparable.");
-      }
-      keysForSort.add(key);
-    }
-  }
-  
-  @Override
-  public int compareTo(Attributes other) {
-    if (keysForSort.isEmpty()) {
-      return 0;
-    }
-    int comp = 0;
-    for (Key<?> key : keysForSort) {
-      if (!hasAttribute(key) || !other.hasAttribute(key)) {
-        return 0;
-      }
-      Comparable value1 = (Comparable) get(key);
-      Comparable value2 = (Comparable) other.get(key);
-      comp = value1.compareTo(value2);
-      if (comp != 0) {
-        break;
-      }
-    }
-    return comp;
   }
 
   @Override
@@ -172,10 +180,8 @@ public class Attributes implements Serializable, Comparable<Attributes> {
     sb.append(StringUtil.ARRAY_END);
     return sb.toString();
   }
-  
+
   private static final long serialVersionUID = 1L;
-  // Store the keys for sort
-  private List<Key<?>> keysForSort;
   private Map<Key<?>, Object> attributeMap;
 
 }
