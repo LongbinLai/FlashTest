@@ -49,53 +49,14 @@ public class Attribute implements Serializable {
 
   }
 
-  public static class Key<T> {
-    public Key(String id, Class<T> type) {
-      this.identifier = id;
-      this.type = type;
-    }
-
-    public Class<T> type() {
-      return this.type;
-    }
-
-    public String identifier() {
-      return this.identifier;
-    }
-
-    @Override
-    public int hashCode() {
-      return this.identifier.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (o == this)
-        return true;
-      if (!(o instanceof Key<?>)) {
-        return false;
-      }
-      Key<T> that = (Key<T>) o;
-      return this.identifier.equals(that.identifier()) && this.type.equals(that.type());
-    }
-
-    @Override
-    public String toString() {
-      return this.identifier;
-    }
-
-    private final String identifier;
-    private final Class<T> type;
-  }
-
   static class Predicate<T extends Comparable<T>> {
-    public Predicate(Attribute.Key<T> key, RankUtil.CompareOprator opr, T val) {
+    public Predicate(Key<T> key, RankUtil.CompareOprator opr, T val) {
       this.key = key;
       this.opr = opr;
       this.val = val;
     }
 
-    public Attribute.Key<T> key() {
+    public Key<T> key() {
       return this.key;
     }
 
@@ -107,7 +68,7 @@ public class Attribute implements Serializable {
       return this.val;
     }
 
-    private final Attribute.Key<T> key;
+    private final Key<T> key;
     private RankUtil.CompareOprator opr;
     private T val;
   }
@@ -124,7 +85,7 @@ public class Attribute implements Serializable {
     if (!attributeMap.containsKey(key)) {
       throw new NoSuchElementException("key: " + key);
     }
-    return key.type.cast(attributeMap.get(key));
+    return key.type().cast(attributeMap.get(key));
   }
 
   public <T> void set(String key, T value) {
